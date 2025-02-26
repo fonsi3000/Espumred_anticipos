@@ -137,4 +137,10 @@ class AdvanceCompletedResource extends Resource
     {
         return parent::getEloquentQuery()->where('status', 'COMPLETED');
     }
+    // En app/Filament/Resources/AdvanceCompletedResource.php
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvanceCompletedResource');
+    }
 }

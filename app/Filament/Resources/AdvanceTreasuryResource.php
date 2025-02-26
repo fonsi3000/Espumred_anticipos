@@ -163,4 +163,10 @@ class AdvanceTreasuryResource extends Resource
     {
         return parent::getEloquentQuery()->where('status', 'TREASURY');
     }
+    // En app/Filament/Resources/AdvanceTreasuryResource.php
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvanceTreasuryResource');
+    }
 }

@@ -179,4 +179,11 @@ class AdvancePendingResource extends Resource
     {
         return parent::getEloquentQuery()->where('status', 'PENDING');
     }
+
+    // En app/Filament/Resources/AdvancePendingResource.php
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvancePendingResource');
+    }
 }

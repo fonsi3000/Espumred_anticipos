@@ -274,4 +274,10 @@ class AdvanceUserResource extends Resource
 
         return number_format($number, 2) . ' ' . ($currencies[$currency] ?? '');
     }
+    // En app/Filament/Resources/AdvanceUserResource.php
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvanceUserResource');
+    }
 }

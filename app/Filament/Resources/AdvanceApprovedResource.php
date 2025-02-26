@@ -165,4 +165,11 @@ class AdvanceApprovedResource extends Resource
     {
         return parent::getEloquentQuery()->where('status', 'APPROVED');
     }
+
+    // En app/Filament/Resources/AdvanceApprovedResource.php
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvanceApprovedResource');
+    }
 }

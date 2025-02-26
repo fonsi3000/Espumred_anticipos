@@ -5,17 +5,50 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\Advance;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Support\Str;
 
 class AdvancePolicy
 {
     use HandlesAuthorization;
 
     /**
+     * Get the appropriate permission based on the resource being accessed.
+     */
+    protected function getPermissionForResource(string $action, ?string $resource = null): string
+    {
+        // Si estamos en un contexto de resource específico, usar su permiso
+        if ($resource) {
+            return "{$action}_{$resource}";
+        }
+
+        // De lo contrario, verificar de qué resource viene la solicitud
+        $requestPath = request()->path();
+
+        if (Str::contains($requestPath, 'advance-user')) {
+            return "{$action}_AdvanceUserResource";
+        } elseif (Str::contains($requestPath, 'advance-pending')) {
+            return "{$action}_AdvancePendingResource";
+        } elseif (Str::contains($requestPath, 'advance-approved')) {
+            return "{$action}_AdvanceApprovedResource";
+        } elseif (Str::contains($requestPath, 'advance-completed')) {
+            return "{$action}_AdvanceCompletedResource";
+        } elseif (Str::contains($requestPath, 'advance-legalization')) {
+            return "{$action}_AdvanceLegalizationResource";
+        } elseif (Str::contains($requestPath, 'advance-treasury')) {
+            return "{$action}_AdvanceTreasuryResource";
+        } else {
+            // Permiso predeterminado
+            return "{$action}_AdvanceResource";
+        }
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_advance::user');
+        $permission = $this->getPermissionForResource('view_any');
+        return $user->can($permission);
     }
 
     /**
@@ -23,7 +56,8 @@ class AdvancePolicy
      */
     public function view(User $user, Advance $advance): bool
     {
-        return $user->can('view_advance::user');
+        $permission = $this->getPermissionForResource('view');
+        return $user->can($permission);
     }
 
     /**
@@ -31,7 +65,8 @@ class AdvancePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_advance::user');
+        $permission = $this->getPermissionForResource('create');
+        return $user->can($permission);
     }
 
     /**
@@ -39,7 +74,8 @@ class AdvancePolicy
      */
     public function update(User $user, Advance $advance): bool
     {
-        return $user->can('update_advance::user');
+        $permission = $this->getPermissionForResource('update');
+        return $user->can($permission);
     }
 
     /**
@@ -47,7 +83,8 @@ class AdvancePolicy
      */
     public function delete(User $user, Advance $advance): bool
     {
-        return $user->can('delete_advance::user');
+        $permission = $this->getPermissionForResource('delete');
+        return $user->can($permission);
     }
 
     /**
@@ -55,7 +92,8 @@ class AdvancePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_advance::user');
+        $permission = $this->getPermissionForResource('delete_any');
+        return $user->can($permission);
     }
 
     /**
@@ -63,7 +101,8 @@ class AdvancePolicy
      */
     public function forceDelete(User $user, Advance $advance): bool
     {
-        return $user->can('force_delete_advance::user');
+        $permission = $this->getPermissionForResource('force_delete');
+        return $user->can($permission);
     }
 
     /**
@@ -71,7 +110,8 @@ class AdvancePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_advance::user');
+        $permission = $this->getPermissionForResource('force_delete_any');
+        return $user->can($permission);
     }
 
     /**
@@ -79,7 +119,8 @@ class AdvancePolicy
      */
     public function restore(User $user, Advance $advance): bool
     {
-        return $user->can('restore_advance::user');
+        $permission = $this->getPermissionForResource('restore');
+        return $user->can($permission);
     }
 
     /**
@@ -87,7 +128,8 @@ class AdvancePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_advance::user');
+        $permission = $this->getPermissionForResource('restore_any');
+        return $user->can($permission);
     }
 
     /**
@@ -95,7 +137,8 @@ class AdvancePolicy
      */
     public function replicate(User $user, Advance $advance): bool
     {
-        return $user->can('replicate_advance::user');
+        $permission = $this->getPermissionForResource('replicate');
+        return $user->can($permission);
     }
 
     /**
@@ -103,6 +146,7 @@ class AdvancePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_advance::user');
+        $permission = $this->getPermissionForResource('reorder');
+        return $user->can($permission);
     }
 }

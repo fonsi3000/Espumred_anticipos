@@ -167,4 +167,8 @@ class AdvanceLegalizationResource extends Resource
     {
         return parent::getEloquentQuery()->where('status', 'LEGALIZATION');
     }
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('view_AdvanceLegalizationResource');
+    }
 }
