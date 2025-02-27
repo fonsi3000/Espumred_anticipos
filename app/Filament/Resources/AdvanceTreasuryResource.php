@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\Action;
 use Illuminate\Contracts\View\View;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 
 class AdvanceTreasuryResource extends Resource
 {
@@ -28,6 +29,25 @@ class AdvanceTreasuryResource extends Resource
     protected static ?string $navigationLabel = 'Anticipos por Egresos';
 
     protected static ?int $navigationSort = 4;
+
+    // Implementación del método requerido por HasShieldPermissions
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'force_delete',
+            'force_delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
 
     public static function canCreate(): bool
     {
@@ -167,6 +187,6 @@ class AdvanceTreasuryResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_AdvanceTreasuryResource');
+        return auth()->user()->can('view_advance-treasury-resource');
     }
 }

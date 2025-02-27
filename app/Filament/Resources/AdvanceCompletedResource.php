@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\AdvanceCompletedResource\Pages;
+use App\Filament\Resources\AdvanceResource\Pages;
 use App\Models\Advance;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -27,6 +27,25 @@ class AdvanceCompletedResource extends Resource
     protected static ?string $navigationLabel = 'Anticipos Terminados';
 
     protected static ?int $navigationSort = 6;
+
+    // Implementación del método requerido por HasShieldPermissions
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'force_delete',
+            'force_delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
 
     public static function canCreate(): bool
     {
@@ -141,6 +160,6 @@ class AdvanceCompletedResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_AdvanceCompletedResource');
+        return auth()->user()->can('view_advance-completed-resource');
     }
 }

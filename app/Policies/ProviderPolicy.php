@@ -15,7 +15,7 @@ class ProviderPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_provider');
+        return $user->can('view_any_provider-resource');
     }
 
     /**
@@ -23,7 +23,7 @@ class ProviderPolicy
      */
     public function view(User $user, Provider $provider): bool
     {
-        return $user->can('view_provider');
+        return $user->can('view_provider-resource');
     }
 
     /**
@@ -31,7 +31,7 @@ class ProviderPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_provider');
+        return $user->can('create_provider-resource');
     }
 
     /**
@@ -39,7 +39,7 @@ class ProviderPolicy
      */
     public function update(User $user, Provider $provider): bool
     {
-        return $user->can('update_provider');
+        return $user->can('update_provider-resource');
     }
 
     /**
@@ -47,7 +47,7 @@ class ProviderPolicy
      */
     public function delete(User $user, Provider $provider): bool
     {
-        return $user->can('delete_provider');
+        return $user->can('delete_provider-resource');
     }
 
     /**
@@ -55,7 +55,7 @@ class ProviderPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_provider');
+        return $user->can('delete_any_provider-resource');
     }
 
     /**
@@ -63,7 +63,7 @@ class ProviderPolicy
      */
     public function forceDelete(User $user, Provider $provider): bool
     {
-        return $user->can('force_delete_provider');
+        return $user->can('force_delete_provider-resource');
     }
 
     /**
@@ -71,7 +71,7 @@ class ProviderPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_provider');
+        return $user->can('force_delete_any_provider-resource');
     }
 
     /**
@@ -79,7 +79,7 @@ class ProviderPolicy
      */
     public function restore(User $user, Provider $provider): bool
     {
-        return $user->can('restore_provider');
+        return $user->can('restore_provider-resource');
     }
 
     /**
@@ -87,7 +87,7 @@ class ProviderPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_provider');
+        return $user->can('restore_any_provider-resource');
     }
 
     /**
@@ -95,7 +95,7 @@ class ProviderPolicy
      */
     public function replicate(User $user, Provider $provider): bool
     {
-        return $user->can('replicate_provider');
+        return $user->can('replicate_provider-resource');
     }
 
     /**
@@ -103,6 +103,6 @@ class ProviderPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_provider');
+        return $user->can('reorder_provider-resource');
     }
 }

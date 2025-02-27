@@ -29,6 +29,25 @@ class AdvancePendingResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    // Implementación del método requerido por HasShieldPermissions
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'force_delete',
+            'force_delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -184,6 +203,6 @@ class AdvancePendingResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_AdvancePendingResource');
+        return auth()->user()->can('view_advance-pending-resource');
     }
 }

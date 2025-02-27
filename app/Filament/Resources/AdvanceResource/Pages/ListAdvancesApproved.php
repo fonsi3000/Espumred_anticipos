@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\AdvanceApprovedResource\Pages;
+namespace App\Filament\Resources\AdvanceResource\Pages;
 
 use App\Filament\Resources\AdvanceApprovedResource;
 use Filament\Resources\Pages\ListRecords;

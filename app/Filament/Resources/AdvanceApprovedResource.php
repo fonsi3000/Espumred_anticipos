@@ -2,7 +2,12 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\AdvanceApprovedResource\Pages;
+// Cambia este import
+// use App\Filament\Resources\AdvanceResource\Pages;
+
+// Por este import específico
+use App\Filament\Resources\AdvanceResource\Pages\ListAdvancesApproved;
+
 use App\Models\Advance;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -28,6 +33,25 @@ class AdvanceApprovedResource extends Resource
     protected static ?string $navigationLabel = 'Anticipos por Código SAP';
 
     protected static ?int $navigationSort = 3;
+
+    // Implementación del método requerido por HasShieldPermissions
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'force_delete',
+            'force_delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
 
     public static function canCreate(): bool
     {
@@ -157,8 +181,8 @@ class AdvanceApprovedResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAdvancesApproved::route('/'),
-        ];
+            'index' => ListAdvancesApproved::route('/'),
+        ];;
     }
 
     public static function getEloquentQuery(): Builder
@@ -170,6 +194,6 @@ class AdvanceApprovedResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_AdvanceApprovedResource');
+        return auth()->user()->can('view_advance-approved-resource');
     }
 }

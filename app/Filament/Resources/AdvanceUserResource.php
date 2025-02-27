@@ -17,6 +17,8 @@ use Illuminate\Contracts\View\View;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Card;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+
 
 class AdvanceUserResource extends Resource
 {
@@ -31,6 +33,26 @@ class AdvanceUserResource extends Resource
     protected static ?string $navigationLabel = 'Mis Anticipos';
 
     protected static ?int $navigationSort = 1;
+
+    // Implementación del método requerido por HasShieldPermissions
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'force_delete',
+            'force_delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
+
 
     public static function form(Form $form): Form
     {
@@ -278,6 +300,6 @@ class AdvanceUserResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('view_AdvanceUserResource');
+        return auth()->user()->can('view_advance-user-resource');
     }
 }
