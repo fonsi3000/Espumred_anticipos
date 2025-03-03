@@ -11,6 +11,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Support\Enums\FontWeight;
 use Illuminate\Contracts\View\View;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+
+
 
 class AdvanceResource extends Resource
 {
@@ -311,11 +315,20 @@ class AdvanceResource extends Resource
                         ]);
                     })
                     ->modalFooterActions([
-                        Tables\Actions\Action::make('imprimir')
-                            ->label('Imprimir')
-                            ->icon('heroicon-o-printer')
+                        Tables\Actions\Action::make('descargar')
+                            ->label('Descargar')
+                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
                             ->color('gray')
-                            ->action(fn() => null),
+                            ->action(function (Advance $record) {
+
+                                return response()->streamDownload(function () use ($record) {
+                                    echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
+                                        'advance' => $record,
+                                        'statuses' => Advance::STATUS,
+                                        'isPdfDownload' => true,
+                                    ])->output();
+                                }, "anticipo-{$record->id}.pdf");
+                            }),
                         Tables\Actions\Action::make('cerrar')
                             ->label('Cerrar')
                             ->color('secondary')
