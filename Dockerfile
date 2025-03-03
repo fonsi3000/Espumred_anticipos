@@ -51,8 +51,26 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.2-pcov \
     php8.2-dev
 
-# Instalar Swoole y habilitar la extensión
-RUN pecl install swoole && \
+# Instalar Swoole con manejo de errores y reintentos
+RUN set -e; \
+    # Crear un script para instalar Swoole con reintentos
+    echo '#!/bin/bash \n\
+    MAX_ATTEMPTS=5 \n\
+    ATTEMPT=1 \n\
+    while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do \n\
+    echo "Intento $ATTEMPT de $MAX_ATTEMPTS para instalar Swoole" \n\
+    if pecl install swoole; then \n\
+    echo "Swoole instalado correctamente" \n\
+    exit 0 \n\
+    fi \n\
+    echo "Fallo en el intento $ATTEMPT. Esperando 10 segundos antes de reintentar..." \n\
+    sleep 10 \n\
+    ATTEMPT=$((ATTEMPT+1)) \n\
+    done \n\
+    echo "Error: No se pudo instalar Swoole después de $MAX_ATTEMPTS intentos" \n\
+    exit 1' > /usr/local/bin/install-swoole.sh && \
+    chmod +x /usr/local/bin/install-swoole.sh && \
+    /usr/local/bin/install-swoole.sh && \
     echo "extension=swoole.so" > /etc/php/8.2/mods-available/swoole.ini && \
     phpenmod swoole
 
@@ -71,9 +89,9 @@ RUN composer install --no-scripts --no-autoloader --no-interaction
 # Copiar el resto de los archivos de la aplicación
 COPY . .
 
-# Generar el autoloader optimizado y ejecutar scripts post-install
+# Generar el autoloader optimizado y configurar la aplicación
+# Se eliminó la llamada a post-install-cmd que no existe
 RUN composer dump-autoload --optimize && \
-    composer run-script post-install-cmd && \
     composer require laravel/octane --no-interaction && \
     php artisan octane:install --server=swoole && \
     npm install && npm run build && \
@@ -81,8 +99,8 @@ RUN composer dump-autoload --optimize && \
     chmod -R 775 storage bootstrap/cache && \
     php artisan key:generate --force
 
-# Exponer el puerto 5050 
+# Exponer el puerto 5050
 EXPOSE 5050
 
-# Comando para iniciar la aplicación con Laravel Octane y Swoole en el puerto 5050
+# Comando para iniciar la aplicación con Laravel Octane y Swoole
 CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=5050", "--workers=4", "--task-workers=2"]
