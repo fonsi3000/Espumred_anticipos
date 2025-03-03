@@ -81,7 +81,7 @@ RUN composer dump-autoload --optimize && \
     chmod -R 775 storage bootstrap/cache && \
     php artisan key:generate --force
 
-# Exponer el puerto 5050 (cambiado de 2020 a 5050)
+# Exponer el puerto 5050 
 EXPOSE 5050
 
 # Comando para iniciar la aplicación con Laravel Octane y Swoole en el puerto 5050
