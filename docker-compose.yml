@@ -14,7 +14,7 @@ services:
       - APP_TIMEZONE=America/Bogota
       - DB_HOST=db
       - DB_PORT=3306  # Puerto interno de MySQL (dentro de la red Docker)
-      - DB_DATABASE=espumdesk
+      - DB_DATABASE=db_anticipos
       - DB_USERNAME=root
       - DB_PASSWORD=Espumas2025*.
       - APP_LOCALE=es
