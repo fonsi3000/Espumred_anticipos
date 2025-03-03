@@ -62,11 +62,18 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar los archivos de la aplicación
+# Copiar composer.json y composer.lock primero para aprovechar la caché de capas de Docker
+COPY composer.json composer.lock ./
+
+# Instalar dependencias de Composer
+RUN composer install --no-scripts --no-autoloader --no-interaction
+
+# Copiar el resto de los archivos de la aplicación
 COPY . .
 
-# Instalar dependencias de Composer y Node.js
-RUN composer install --no-interaction --optimize-autoloader --no-dev && \
+# Generar el autoloader optimizado y ejecutar scripts post-install
+RUN composer dump-autoload --optimize && \
+    composer run-script post-install-cmd && \
     composer require laravel/octane --no-interaction && \
     php artisan octane:install --server=swoole && \
     npm install && npm run build && \
@@ -74,8 +81,8 @@ RUN composer install --no-interaction --optimize-autoloader --no-dev && \
     chmod -R 775 storage bootstrap/cache && \
     php artisan key:generate --force
 
-# Exponer el puerto 2020 (o el puerto que necesites)
-EXPOSE 2020
+# Exponer el puerto 5050 (cambiado de 2020 a 5050)
+EXPOSE 5050
 
-# Comando para iniciar la aplicación con Laravel Octane y Swoole
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=2020", "--workers=4", "--task-workers=2"]
+# Comando para iniciar la aplicación con Laravel Octane y Swoole en el puerto 5050
+CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=5050", "--workers=4", "--task-workers=2"]
