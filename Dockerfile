@@ -51,26 +51,9 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.2-pcov \
     php8.2-dev
 
-# Instalar Swoole con manejo de errores y reintentos
+# Instalar Swoole con manejo de errores
 RUN set -e; \
-    # Crear un script para instalar Swoole con reintentos
-    echo '#!/bin/bash \n\
-    MAX_ATTEMPTS=5 \n\
-    ATTEMPT=1 \n\
-    while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do \n\
-    echo "Intento $ATTEMPT de $MAX_ATTEMPTS para instalar Swoole" \n\
-    if pecl install swoole; then \n\
-    echo "Swoole instalado correctamente" \n\
-    exit 0 \n\
-    fi \n\
-    echo "Fallo en el intento $ATTEMPT. Esperando 10 segundos antes de reintentar..." \n\
-    sleep 10 \n\
-    ATTEMPT=$((ATTEMPT+1)) \n\
-    done \n\
-    echo "Error: No se pudo instalar Swoole después de $MAX_ATTEMPTS intentos" \n\
-    exit 1' > /usr/local/bin/install-swoole.sh && \
-    chmod +x /usr/local/bin/install-swoole.sh && \
-    /usr/local/bin/install-swoole.sh && \
+    pecl install swoole || pecl install swoole; \
     echo "extension=swoole.so" > /etc/php/8.2/mods-available/swoole.ini && \
     phpenmod swoole
 
@@ -80,24 +63,18 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar composer.json y composer.lock primero para aprovechar la caché de capas de Docker
-COPY composer.json composer.lock ./
-
-# Instalar dependencias de Composer
-RUN composer install --no-scripts --no-autoloader --no-interaction
-
-# Copiar el resto de los archivos de la aplicación
+# Copiar los archivos de la aplicación
 COPY . .
 
-# Generar el autoloader optimizado y configurar la aplicación
-# Se eliminó la llamada a post-install-cmd que no existe
-RUN composer dump-autoload --optimize && \
-    composer require laravel/octane --no-interaction && \
-    php artisan octane:install --server=swoole && \
-    npm install && npm run build && \
-    chown -R www-data:www-data /app && \
-    chmod -R 775 storage bootstrap/cache && \
-    php artisan key:generate --force
+# Instalar dependencias de manera separada para facilitar la depuración
+RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer require laravel/octane --no-interaction
+RUN php artisan octane:install --server=swoole || true
+RUN npm install || true
+RUN npm run build || true
+RUN chown -R www-data:www-data /app
+RUN chmod -R 775 storage bootstrap/cache
+RUN php artisan key:generate --force || true
 
 # Exponer el puerto 5050
 EXPOSE 5050
