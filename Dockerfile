@@ -76,7 +76,7 @@ COPY . .
 
 # Instalar dependencias de manera separada para facilitar la depuración
 RUN composer install --no-interaction --optimize-autoloader --no-dev
-RUN composer require laravel/octane swoole --with-dependencies
+RUN composer require laravel/octane --with-all-dependencies
 RUN php artisan octane:install --server=swoole --force
 RUN composer dump-autoload -o
 RUN php artisan config:clear
