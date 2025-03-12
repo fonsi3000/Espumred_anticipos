@@ -115,6 +115,6 @@ ENV DB_CONNECTION=mysql
 # Exponer el puerto 5050
 EXPOSE 5050
 
-# Comando para iniciar la aplicación con Laravel Octane y Swoole
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=5050"]
+# Mantener el contenedor en ejecución sin iniciar ningún servidor
+CMD ["tail", "-f", "/dev/null"]
 
