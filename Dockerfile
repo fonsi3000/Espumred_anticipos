@@ -116,4 +116,5 @@ ENV DB_CONNECTION=mysql
 EXPOSE 5050
 
 # Comando para iniciar la aplicación con Laravel Octane y Swoole
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=5050", "--workers=4", "--task-workers=2"]
+CMD ["bash", "-c", "sleep infinity"]
+
