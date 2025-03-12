@@ -51,6 +51,15 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.2-pcov \
     php8.2-dev
 
+# Después de la sección donde instalas PHP y sus extensiones, agrega esto:
+RUN echo "opcache.enable=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.memory_consumption=128" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.interned_strings_buffer=8" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.max_accelerated_files=10000" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.validate_timestamps=0" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.save_comments=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.fast_shutdown=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini
+
 # Instalar Swoole con manejo de errores
 RUN set -e; \
     pecl install swoole || pecl install swoole; \
