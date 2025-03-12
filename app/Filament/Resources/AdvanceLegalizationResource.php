@@ -182,7 +182,7 @@ class AdvanceLegalizationResource extends Resource
                 return $query->where('status', 'LEGALIZATION');
             })
             ->defaultSort('treasury_at', 'desc')
-            ->poll('60s');
+        ;
     }
 
     public static function getPages(): array

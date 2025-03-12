@@ -281,7 +281,7 @@ class AdvanceUserResource extends Resource
                 return $query->where('created_by', Auth::id());
             })
             ->defaultSort('created_at', 'desc')
-            ->poll('60s');
+        ;
     }
 
     public static function getPages(): array

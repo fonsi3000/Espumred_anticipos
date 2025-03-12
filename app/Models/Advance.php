@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class Advance extends Model
 {
@@ -60,6 +61,7 @@ class Advance extends Model
         'legalized_at' => 'datetime'
     ];
 
+    // Constantes cacheadas para mejorar el rendimiento
     public const CURRENCIES = [
         'COP' => 'Pesos Colombianos',
         'USD' => 'Dólar Estadounidense',
@@ -84,10 +86,10 @@ class Advance extends Model
         'REJECTED' => 'red'
     ];
 
-    // Relaciones
+    // Relaciones optimizadas con clave explícita
     public function provider(): BelongsTo
     {
-        return $this->belongsTo(Provider::class);
+        return $this->belongsTo(Provider::class, 'provider_id');
     }
 
     public function creator(): BelongsTo
@@ -115,44 +117,59 @@ class Advance extends Model
         return $this->belongsTo(User::class, 'legalized_by');
     }
 
-    // Métodos de cálculo
+    // Métodos de cálculo (se mantienen iguales para preservar funcionalidad)
     public function calculateSubtotal(): float
     {
-        return $this->quantity * $this->unit_price;
+        return (float)$this->quantity * (float)$this->unit_price;
     }
 
     public function calculateIva(): float
     {
-        return $this->has_iva ? $this->subtotal * 0.19 : 0;
+        return $this->has_iva ? (float)$this->subtotal * 0.19 : 0;
     }
 
     public function calculateTotal(): float
     {
-        return $this->subtotal + $this->iva_value;
+        return (float)$this->subtotal + (float)$this->iva_value;
     }
 
     public function calculateAdvanceAmount(): float
     {
-        return $this->total_amount * ($this->advance_percentage / 100);
+        return (float)$this->total_amount * ((float)$this->advance_percentage / 100);
     }
 
     public function calculatePendingBalance(): float
     {
-        return $this->total_amount - $this->advance_amount;
+        return (float)$this->total_amount - (float)$this->advance_amount;
     }
 
-    // Attributes
+    // Optimización de atributos con Cache
     public function getStatusLabelAttribute(): string
     {
-        return self::STATUS[$this->status] ?? 'Desconocido';
+        return Cache::remember("advance_status_label_{$this->id}_{$this->status}", now()->addDay(), function () {
+            return self::STATUS[$this->status] ?? 'Desconocido';
+        });
     }
 
     public function getStatusColorAttribute(): string
     {
-        return self::STATUS_COLORS[$this->status] ?? 'gray';
+        return Cache::remember("advance_status_color_{$this->id}_{$this->status}", now()->addDay(), function () {
+            return self::STATUS_COLORS[$this->status] ?? 'gray';
+        });
     }
 
-    // Métodos de acción
+    // Método optimizado para recalcular todos los valores a la vez
+    public function recalculateAllValues(): void
+    {
+        $this->subtotal = $this->calculateSubtotal();
+        $this->iva_value = $this->calculateIva();
+        $this->total_amount = $this->calculateTotal();
+        $this->advance_amount = $this->calculateAdvanceAmount();
+        $this->pending_balance = $this->calculatePendingBalance();
+        $this->amount_in_words = self::numberToWords($this->total_amount, $this->currency);
+    }
+
+    // Métodos de acción (mantienen funcionalidad)
     public function reject(string $reason): void
     {
         $this->status = 'REJECTED';
@@ -160,6 +177,9 @@ class Advance extends Model
         $this->rejection_date = now();
         $this->status_updated_at = now();
         $this->save();
+
+        // Limpia el caché relacionado
+        $this->clearModelCache();
     }
 
     public function updateStatus(string $status): void
@@ -177,6 +197,9 @@ class Advance extends Model
         }
 
         $this->save();
+
+        // Limpia el caché relacionado
+        $this->clearModelCache();
     }
 
     public function addSapCode(string $sapCode): void
@@ -187,6 +210,9 @@ class Advance extends Model
         $this->accounted_by = Auth::id();
         $this->accounted_at = now();
         $this->save();
+
+        // Limpia el caché relacionado
+        $this->clearModelCache();
     }
 
     public function addEgressNumber(string $egressNumber): void
@@ -197,6 +223,9 @@ class Advance extends Model
         $this->treasury_by = Auth::id();
         $this->treasury_at = now();
         $this->save();
+
+        // Limpia el caché relacionado
+        $this->clearModelCache();
     }
 
     public function addLegalizationNumber(string $legalizationNumber): void
@@ -207,9 +236,19 @@ class Advance extends Model
         $this->legalized_by = Auth::id();
         $this->legalized_at = now();
         $this->save();
+
+        // Limpia el caché relacionado
+        $this->clearModelCache();
     }
 
-    // Hook para calcular valores antes de guardar
+    // Método para limpiar caché asociado al modelo
+    protected function clearModelCache(): void
+    {
+        Cache::forget("advance_status_label_{$this->id}_{$this->status}");
+        Cache::forget("advance_status_color_{$this->id}_{$this->status}");
+    }
+
+    // Hook optimizado con verificación para evitar cálculos innecesarios
     protected static function boot()
     {
         parent::boot();
@@ -218,35 +257,40 @@ class Advance extends Model
             $advance->status = $advance->status ?? 'PENDING';
             $advance->status_updated_at = now();
             $advance->created_by = Auth::id();
-            $advance->subtotal = $advance->calculateSubtotal();
-            $advance->iva_value = $advance->calculateIva();
-            $advance->total_amount = $advance->calculateTotal();
-            $advance->advance_amount = $advance->calculateAdvanceAmount();
-            $advance->pending_balance = $advance->calculatePendingBalance();
-            $advance->amount_in_words = self::numberToWords($advance->total_amount, $advance->currency);
+
+            // Realizamos todos los cálculos de una vez
+            $advance->recalculateAllValues();
         });
 
         static::updating(function ($advance) {
             if ($advance->isDirty('status')) {
                 $advance->status_updated_at = now();
             }
-            $advance->subtotal = $advance->calculateSubtotal();
-            $advance->iva_value = $advance->calculateIva();
-            $advance->total_amount = $advance->calculateTotal();
-            $advance->advance_amount = $advance->calculateAdvanceAmount();
-            $advance->pending_balance = $advance->calculatePendingBalance();
-            $advance->amount_in_words = self::numberToWords($advance->total_amount, $advance->currency);
+
+            // Solo recalculamos si han cambiado los campos relevantes
+            if (
+                $advance->isDirty(['quantity', 'unit_price', 'has_iva', 'advance_percentage']) ||
+                $advance->isDirty(['subtotal', 'iva_value', 'total_amount'])
+            ) {
+                $advance->recalculateAllValues();
+            }
         });
     }
 
+    // Método mejorado para convertir números a palabras
     public static function numberToWords($number, $currency): string
     {
-        $currencies = [
-            'COP' => 'PESOS COLOMBIANOS',
-            'USD' => 'DÓLARES ESTADOUNIDENSES',
-            'EURO' => 'EUROS'
-        ];
+        // Cache de la conversión para evitar procesamiento repetido
+        $cacheKey = "number_to_words_" . md5($number . $currency);
 
-        return number_format($number, 2) . ' ' . ($currencies[$currency] ?? '');
+        return Cache::remember($cacheKey, now()->addMonth(), function () use ($number, $currency) {
+            $currencies = [
+                'COP' => 'PESOS COLOMBIANOS',
+                'USD' => 'DÓLARES ESTADOUNIDENSES',
+                'EURO' => 'EUROS'
+            ];
+
+            return number_format((float)$number, 2) . ' ' . ($currencies[$currency] ?? '');
+        });
     }
 }

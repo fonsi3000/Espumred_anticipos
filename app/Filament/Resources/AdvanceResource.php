@@ -339,7 +339,7 @@ class AdvanceResource extends Resource
                 // Eliminar todas las acciones en masa
             ])
             ->defaultSort('created_at', 'desc')
-            ->poll('60s');
+        ;
     }
 
     public static function getPages(): array

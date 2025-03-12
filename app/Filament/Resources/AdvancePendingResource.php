@@ -194,7 +194,7 @@ class AdvancePendingResource extends Resource
                 return $query->where('status', 'PENDING');
             })
             ->defaultSort('created_at', 'desc')
-            ->poll('60s');
+        ;
     }
 
     public static function getPages(): array

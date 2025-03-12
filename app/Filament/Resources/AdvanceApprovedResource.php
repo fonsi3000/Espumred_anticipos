@@ -185,7 +185,7 @@ class AdvanceApprovedResource extends Resource
                 return $query->where('status', 'APPROVED');
             })
             ->defaultSort('approved_at', 'desc')
-            ->poll('60s');
+        ;
     }
 
     public static function getPages(): array
