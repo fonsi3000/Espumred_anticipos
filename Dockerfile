@@ -4,6 +4,7 @@ FROM ubuntu:22.04
 # Configurar variables de entorno
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Bogota
+ENV OCTANE_SERVER=swoole
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get upgrade -y && \
@@ -49,18 +50,21 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.2-intl \
     php8.2-readline \
     php8.2-pcov \
-    php8.2-dev
+    php8.2-dev \
+    php8.2-swoole
 
-# Instalar Swoole con manejo de errores (igual que tu versión original)
-RUN set -e; \
-    pecl install swoole || pecl install swoole; \
-    echo "extension=swoole.so" > /etc/php/8.2/mods-available/swoole.ini && \
-    phpenmod swoole
-
-# Añadir opcache para mejor rendimiento
+# Configurar OPcache para mejor rendimiento
 RUN echo "opcache.enable=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
     echo "opcache.memory_consumption=128" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
-    echo "opcache.max_accelerated_files=10000" >> /etc/php/8.2/cli/conf.d/10-opcache.ini
+    echo "opcache.interned_strings_buffer=8" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.max_accelerated_files=10000" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.validate_timestamps=0" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.save_comments=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.fast_shutdown=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini
+
+# Configurar PHP para mejor rendimiento con Octane
+RUN echo "memory_limit=512M" >> /etc/php/8.2/cli/conf.d/99-custom.ini && \
+    echo "max_execution_time=60" >> /etc/php/8.2/cli/conf.d/99-custom.ini
 
 # Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -71,18 +75,46 @@ WORKDIR /app
 # Copiar los archivos de la aplicación
 COPY . .
 
+# Configurar el entorno para evitar conexiones a la base de datos durante la construcción
+ENV DB_CONNECTION=sqlite
+ENV DB_DATABASE=:memory:
+
 # Instalar dependencias de manera separada para facilitar la depuración
 RUN composer install --no-interaction --optimize-autoloader --no-dev
-RUN composer require laravel/octane --no-interaction
-RUN php artisan octane:install --server=swoole || true
+RUN composer require laravel/octane --with-all-dependencies
+RUN php artisan octane:install --server=swoole --force
+
+# Verificar y corregir el registro del proveedor de servicios de Octane
+RUN php artisan list | grep octane || echo "Octane no está registrado correctamente; registrando manualmente"
+RUN if ! php artisan list | grep -q octane; then \
+    echo "class_exists('\Laravel\Octane\OctaneServiceProvider') || exit(1);" | php && \
+    sed -i "/App\\\\Providers\\\\RouteServiceProvider::class,/a \        Laravel\\\\Octane\\\\OctaneServiceProvider::class," config/app.php; \
+    fi
+
+# Verificar después de registro manual
+RUN php artisan list | grep octane
+
+# Limpiar caché y optimizar autoload
+RUN composer dump-autoload -o
+RUN php artisan config:clear --no-interaction
+RUN php artisan view:clear --no-interaction
+RUN php artisan route:clear --no-interaction
+
+# Instalar y compilar assets
 RUN npm install || true
 RUN npm run build || true
+
+# Configurar permisos
 RUN chown -R www-data:www-data /app
 RUN chmod -R 775 storage bootstrap/cache
 RUN php artisan key:generate --force || true
+
+# Restaurar la configuración de la base de datos para producción
+ENV DB_CONNECTION=mysql
 
 # Exponer el puerto 5050
 EXPOSE 5050
 
 # Comando para iniciar la aplicación con Laravel Octane y Swoole
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=5050", "--workers=4", "--task-workers=2"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=5050"]
+
