@@ -74,13 +74,18 @@ WORKDIR /app
 # Copiar los archivos de la aplicación
 COPY . .
 
+# Configurar el entorno para evitar conexiones a la base de datos durante la construcción
+ENV DB_CONNECTION=sqlite
+ENV DB_DATABASE=:memory:
+
 # Instalar dependencias de manera separada para facilitar la depuración
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 RUN composer require laravel/octane --with-all-dependencies
 RUN php artisan octane:install --server=swoole --force
 RUN composer dump-autoload -o
-RUN php artisan config:clear
-RUN php artisan cache:clear
+RUN php artisan config:clear --no-interaction
+RUN php artisan view:clear --no-interaction
+RUN php artisan route:clear --no-interaction
 
 # Instalar y compilar assets
 RUN npm install || true
