@@ -105,13 +105,16 @@ class AdvancePendingResource extends Resource
                 Tables\Columns\TextColumn::make('purchase_order')
                     ->label('Orden de Compra')
                     ->searchable(),
-                // Tables\Columns\TextColumn::make('creator.name')
-                //     ->label('Creado por')
-                //     ->searchable(),
-                // Tables\Columns\TextColumn::make('created_at')
-                //     ->label('Fecha de Creación')
-                //     ->dateTime()
-                //     ->sortable(),
+                // Columnas comentadas pero optimizadas como toggleable para mostrar cuando sea necesario
+                Tables\Columns\TextColumn::make('creator.name')
+                    ->label('Creado por')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Fecha de Creación')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -142,10 +145,9 @@ class AdvancePendingResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -185,16 +187,31 @@ class AdvancePendingResource extends Resource
                     ->modalHeading('Rechazar Anticipo')
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            // Eliminar bulk actions para mejorar rendimiento
+            ->bulkActions([])
+            // Optimización de consulta con eager loading selectivo
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('status', 'PENDING');
+                return $query->where('status', 'PENDING')
+                    ->with([
+                        'provider:id,name',
+                        'creator:id,name'
+                    ]);
             })
             ->defaultSort('created_at', 'desc')
-        ;
+            // Paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros en sesión para mejor UX
+            ->persistFiltersInSession()
+            // Optimizaciones visuales que ayudan al rendimiento
+            ->striped()
+            // Simplificar carga de componentes
+            ->paginationPageOptions([10, 25, 50, 100])
+            // Simplificar interfaz de filtros
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            );
     }
 
     public static function getPages(): array
@@ -204,12 +221,16 @@ class AdvancePendingResource extends Resource
         ];
     }
 
+    // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', 'PENDING');
+        return parent::getEloquentQuery()
+            ->where('status', 'PENDING')
+            ->with([
+                'provider:id,name',
+                'creator:id,name'
+            ]);
     }
-
-    // En app/Filament/Resources/AdvancePendingResource.php
 
     public static function canAccess(): bool
     {

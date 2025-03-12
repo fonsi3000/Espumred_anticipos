@@ -57,6 +57,24 @@ class InicioPanelProvider extends PanelProvider
             ])
             ->plugins([
                 \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
-            ]);
+            ])
+            ->spa() // Activar Single Page Application para mejor UX
+            ->maxContentWidth('full') // Maximizar el espacio disponible
+            ->renderHook(
+                'panels::body.start',
+                fn(): string => '
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            // Retrasa la carga de recursos no críticos
+                            setTimeout(function() {
+                                const deferredStyles = document.querySelectorAll("[data-filament-defer]");
+                                deferredStyles.forEach(function(style) {
+                                    style.setAttribute("media", "all");
+                                });
+                            }, 100);
+                        });
+                    </script>
+                '
+            );
     }
 }

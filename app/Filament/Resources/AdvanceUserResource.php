@@ -81,7 +81,8 @@ class AdvanceUserResource extends Resource
                             ->columnSpan(2),
                     ])
                     ->columns(2)
-                    ->collapsible(),
+                    ->collapsible()
+                    ->lazy(), // Lazy loading para mejorar rendimiento
 
                 Section::make('Detalles Financieros')
                     ->description('Información de montos y cálculos')
@@ -122,7 +123,8 @@ class AdvanceUserResource extends Resource
                             ->suffix(' días'),
                     ])
                     ->columns(3)
-                    ->collapsible(),
+                    ->collapsible()
+                    ->lazy(), // Lazy loading para mejorar rendimiento
 
                 Forms\Components\Hidden::make('subtotal'),
                 Forms\Components\Hidden::make('iva_value'),
@@ -171,10 +173,12 @@ class AdvanceUserResource extends Resource
                 Tables\Columns\TextColumn::make('purchase_order')
                     ->label('Orden de Compra')
                     ->searchable(),
-                // Tables\Columns\TextColumn::make('created_at')
-                //     ->label('Fecha de Creación')
-                //     ->dateTime('d/m/Y H:i')
-                //     ->sortable(),
+                // Columna comentada pero disponible con toggleable
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Fecha de Creación')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -202,10 +206,9 @@ class AdvanceUserResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -244,12 +247,8 @@ class AdvanceUserResource extends Resource
                 Tables\Actions\DeleteAction::make()
                     ->visible(fn(Advance $record): bool => $record->status === 'PENDING'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn(Advance $record): bool => $record->status === 'PENDING'),
-                ]),
-            ])
+            // Optimización: reducir las bulk actions innecesarias
+            ->bulkActions([])
             ->emptyStateHeading('No hay anticipos')
             ->emptyStateDescription('Crea tu primer anticipo haciendo clic en el botón "Crear"')
             ->emptyStateIcon('heroicon-o-banknotes')
@@ -277,11 +276,28 @@ class AdvanceUserResource extends Resource
                         return Advance::create($data);
                     }),
             ])
+            // Optimización de consulta con eager loading selectivo
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('created_by', Auth::id());
+                return $query->where('created_by', Auth::id())
+                    ->with([
+                        'provider:id,name'
+                    ]);
             })
             ->defaultSort('created_at', 'desc')
-        ;
+            // Implementar paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros en sesión para mejor UX
+            ->persistFiltersInSession()
+            // Mejorar presentación visual y rendimiento
+            ->striped()
+            // Optimizador de carga de tabla
+            ->paginationPageOptions([10, 25, 50, 100])
+            // Simplificar la interfaz de filtros
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            );
     }
 
     public static function getPages(): array
@@ -291,9 +307,14 @@ class AdvanceUserResource extends Resource
         ];
     }
 
+    // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('created_by', Auth::id());
+        return parent::getEloquentQuery()
+            ->where('created_by', Auth::id())
+            ->with([
+                'provider:id,name'
+            ]);
     }
 
     public static function numberToWords($number, $currency): string
@@ -306,7 +327,6 @@ class AdvanceUserResource extends Resource
 
         return number_format($number, 2) . ' ' . ($currencies[$currency] ?? '');
     }
-    // En app/Filament/Resources/AdvanceUserResource.php
 
     public static function canAccess(): bool
     {

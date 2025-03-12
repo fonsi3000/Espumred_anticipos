@@ -97,23 +97,28 @@ class AdvanceLegalizationResource extends Resource
                 Tables\Columns\IconColumn::make('has_iva')
                     ->label('IVA')
                     ->boolean(),
-                // Tables\Columns\TextColumn::make('egress_number')
-                //     ->label('N° Egreso')
-                //     ->searchable(),
-                // Tables\Columns\TextColumn::make('sap_code')
-                //     ->label('Código SAP')
-                //     ->searchable(),
-                // Tables\Columns\TextColumn::make('treasurer.name')
-                //     ->label('Procesado por Tesorería')
-                //     ->searchable(),
-                // Tables\Columns\TextColumn::make('treasury_at')
-                //     ->label('Fecha de Proceso Tesorería')
-                //     ->dateTime()
-                //     ->sortable(),
                 Tables\Columns\TextColumn::make('legalization_term')
                     ->label('Plazo de Legalización')
                     ->suffix(' días')
                     ->sortable(),
+                // Columnas adicionales ocultas por defecto para mejorar rendimiento
+                Tables\Columns\TextColumn::make('egress_number')
+                    ->label('N° Egreso')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('sap_code')
+                    ->label('Código SAP')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('treasurer.name')
+                    ->label('Procesado por Tesorería')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('treasury_at')
+                    ->label('Fecha de Proceso Tesorería')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -144,10 +149,9 @@ class AdvanceLegalizationResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -178,11 +182,29 @@ class AdvanceLegalizationResource extends Resource
                     ->modalDescription('Al agregar el número de legalización, el anticipo se marcará como Completado'),
             ])
             ->bulkActions([])
+            // Optimización de consulta con eager loading selectivo
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('status', 'LEGALIZATION');
+                return $query->where('status', 'LEGALIZATION')
+                    ->with([
+                        'provider:id,name',
+                        'treasurer:id,name'
+                    ]);
             })
             ->defaultSort('treasury_at', 'desc')
-        ;
+            // Paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros en sesión para mejor UX
+            ->persistFiltersInSession()
+            // Optimizar visualización para mejor rendimiento
+            ->striped()
+            // Botón de filtros más limpio
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            )
+            // Optimizador de carga de tabla
+            ->paginationPageOptions([10, 25, 50, 100]);
     }
 
     public static function getPages(): array
@@ -192,10 +214,17 @@ class AdvanceLegalizationResource extends Resource
         ];
     }
 
+    // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', 'LEGALIZATION');
+        return parent::getEloquentQuery()
+            ->where('status', 'LEGALIZATION')
+            ->with([
+                'provider:id,name',
+                'treasurer:id,name'
+            ]);
     }
+
     public static function canAccess(): bool
     {
         return auth()->user()->can('view_advance-legalization-resource');

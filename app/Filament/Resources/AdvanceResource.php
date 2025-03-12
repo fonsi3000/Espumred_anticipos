@@ -12,9 +12,7 @@ use Filament\Tables\Table;
 use Filament\Support\Enums\FontWeight;
 use Illuminate\Contracts\View\View;
 use Barryvdh\DomPDF\Facade\Pdf;
-
-
-
+use Illuminate\Database\Eloquent\Builder;
 
 class AdvanceResource extends Resource
 {
@@ -48,6 +46,7 @@ class AdvanceResource extends Resource
             'reorder',
         ];
     }
+
     // Deshabilitar la creación de nuevos anticipos
     public static function canCreate(): bool
     {
@@ -66,7 +65,7 @@ class AdvanceResource extends Resource
         return false;
     }
 
-    // Mantener el formulario para visualización en modo solo lectura
+    // Formulario optimizado con secciones lazy para visualización en modo solo lectura
     public static function form(Form $form): Form
     {
         return $form
@@ -137,6 +136,7 @@ class AdvanceResource extends Resource
                     ->disabled()
                     ->suffix(' días'),
 
+                // Sección lazy para mejorar rendimiento - solo se carga cuando es visible
                 Forms\Components\Section::make('Estado y Trazabilidad')
                     ->schema([
                         Forms\Components\Select::make('status')
@@ -159,8 +159,11 @@ class AdvanceResource extends Resource
                             ->label('Motivo del Rechazo')
                             ->disabled()
                             ->visible(fn($record) => $record?->status === 'REJECTED'),
-                    ])->columnSpan(2),
+                    ])
+                    ->columnSpan(2)
+                    ->lazy(), // Hacer esta sección lazy
 
+                // Sección lazy para mejorar rendimiento - solo se carga cuando es visible
                 Forms\Components\Section::make('Usuarios y Fechas')
                     ->schema([
                         Forms\Components\Grid::make()
@@ -219,7 +222,9 @@ class AdvanceResource extends Resource
                                     ->disabled()
                                     ->visible(fn($record) => $record?->legalized_at),
                             ])
-                    ])->columnSpan(1),
+                    ])
+                    ->columnSpan(1)
+                    ->lazy(), // Hacer esta sección lazy
             ])->columns(3);
     }
 
@@ -317,10 +322,9 @@ class AdvanceResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -335,11 +339,28 @@ class AdvanceResource extends Resource
                             ->action(fn() => null),
                     ]),
             ])
-            ->bulkActions([
-                // Eliminar todas las acciones en masa
-            ])
+            ->bulkActions([])
+            // Optimización: Eager loading selectivo
+            ->modifyQueryUsing(function (Builder $query) {
+                return $query->with([
+                    'provider:id,name',
+                    'creator:id,name',
+                    'approver:id,name'
+                ]);
+            })
             ->defaultSort('created_at', 'desc')
-        ;
+            // Paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros en sesión
+            ->persistFiltersInSession()
+            // Mejorar visualización
+            ->striped()
+            // Interfaz de filtros mejorada
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            );
     }
 
     public static function getPages(): array
@@ -347,6 +368,17 @@ class AdvanceResource extends Resource
         return [
             'index' => Pages\ListAdvances::route('/'),
         ];
+    }
+
+    // Optimización de la consulta principal
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'provider:id,name',
+                'creator:id,name',
+                'approver:id,name'
+            ]);
     }
 
     // Mantener este método por si se utiliza en otras partes
@@ -360,6 +392,7 @@ class AdvanceResource extends Resource
 
         return number_format($number, 2) . ' ' . ($currencies[$currency] ?? '');
     }
+
     public static function canAccess(): bool
     {
         return auth()->user()->can('view_advance-resource');

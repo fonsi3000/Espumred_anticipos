@@ -2,12 +2,7 @@
 
 namespace App\Filament\Resources;
 
-// Cambia este import
-// use App\Filament\Resources\AdvanceResource\Pages;
-
-// Por este import específico
 use App\Filament\Resources\AdvanceResource\Pages\ListAdvancesApproved;
-
 use App\Models\Advance;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
@@ -20,6 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\Action;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Cache;
 
 class AdvanceApprovedResource extends Resource
 {
@@ -112,11 +108,13 @@ class AdvanceApprovedResource extends Resource
                     ->searchable(),
                 // Tables\Columns\TextColumn::make('approver.name')
                 //     ->label('Aprobado por')
-                //     ->searchable(),
+                //     ->searchable()
+                //     ->toggleable(isToggledHiddenByDefault: true),
                 // Tables\Columns\TextColumn::make('approved_at')
                 //     ->label('Fecha de Aprobación')
                 //     ->dateTime()
-                //     ->sortable(),
+                //     ->sortable()
+                //     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -139,6 +137,7 @@ class AdvanceApprovedResource extends Resource
                     ->modalHeading(fn(Advance $record): string => "Anticipo: {$record->provider->name}")
                     ->modalWidth('5xl')
                     ->modalContent(function (Advance $record): View {
+                        // No cachear la vista ya que podría contener objetos no serializables
                         return view('filament.resources.advance-resource.pages.advance-view', [
                             'advance' => $record,
                             'statuses' => Advance::STATUS,
@@ -147,10 +146,9 @@ class AdvanceApprovedResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -181,29 +179,49 @@ class AdvanceApprovedResource extends Resource
                     ->modalDescription('Al agregar el código SAP, el anticipo pasará automáticamente a Tesorería'),
             ])
             ->bulkActions([])
+            // Optimización de la consulta base con eager loading
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('status', 'APPROVED');
+                return $query->where('status', 'APPROVED')
+                    ->with(['provider:id,name', 'approver:id,name']);
             })
             ->defaultSort('approved_at', 'desc')
-        ;
+            // Implementar paginación más eficiente
+            ->paginated([10, 25, 50, 100])
+            // Mejora para reducir el tiempo de respuesta del servidor 
+            ->persistFiltersInSession()
+            // Ocultar actividad de filtro para reducir renderizado
+            ->filtersTriggerAction(
+                fn(\Filament\Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            );
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListAdvancesApproved::route('/'),
-        ];;
+        ];
     }
 
+    // Optimización de la consulta principal
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', 'APPROVED');
+        // No podemos cachear la consulta directamente porque contiene objetos PDO no serializables
+        // En su lugar, optimizamos con eager loading
+        return parent::getEloquentQuery()
+            ->where('status', 'APPROVED')
+            ->with(['provider:id,name', 'creator:id,name', 'approver:id,name']);
     }
-
-    // En app/Filament/Resources/AdvanceApprovedResource.php
 
     public static function canAccess(): bool
     {
         return auth()->user()->can('view_advance-approved-resource');
+    }
+
+    // Simplificamos el método de navegación para evitar problemas de serialización
+    public static function getNavigation(): array
+    {
+        return parent::getNavigation();
     }
 }

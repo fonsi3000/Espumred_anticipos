@@ -14,7 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\Action;
 use Illuminate\Contracts\View\View;
-use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdvanceTreasuryResource extends Resource
 {
@@ -56,7 +56,7 @@ class AdvanceTreasuryResource extends Resource
 
     public static function form(Form $form): Form
     {
-        // Reutilizamos el formulario del AdvanceResource
+        // Reutilizamos el formulario del AdvanceResource con todas sus optimizaciones
         return AdvanceResource::form($form);
     }
 
@@ -103,13 +103,16 @@ class AdvanceTreasuryResource extends Resource
                 Tables\Columns\TextColumn::make('purchase_order')
                     ->label('Orden de Compra')
                     ->searchable(),
-                // Tables\Columns\TextColumn::make('accountant.name')
-                //     ->label('Contabilizado por')
-                //     ->searchable(),
-                // Tables\Columns\TextColumn::make('accounted_at')
-                //     ->label('Fecha de Contabilización')
-                //     ->dateTime()
-                //     ->sortable(),
+                // Columnas adicionales con toggleable para reducir carga inicial
+                Tables\Columns\TextColumn::make('accountant.name')
+                    ->label('Contabilizado por')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('accounted_at')
+                    ->label('Fecha de Contabilización')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -140,10 +143,9 @@ class AdvanceTreasuryResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -174,11 +176,29 @@ class AdvanceTreasuryResource extends Resource
                     ->modalDescription('Al agregar el número de egreso, el anticipo pasará a Legalización'),
             ])
             ->bulkActions([])
+            // Optimización de consulta con eager loading selectivo
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('status', 'TREASURY');
+                return $query->where('status', 'TREASURY')
+                    ->with([
+                        'provider:id,name',
+                        'accountant:id,name'
+                    ]);
             })
             ->defaultSort('accounted_at', 'desc')
-        ;
+            // Paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros en sesión
+            ->persistFiltersInSession()
+            // Mejorar visualización
+            ->striped()
+            // Optimizar opciones de paginación
+            ->paginationPageOptions([10, 25, 50, 100])
+            // Simplificar interfaz de filtros
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            );
     }
 
     public static function getPages(): array
@@ -188,11 +208,16 @@ class AdvanceTreasuryResource extends Resource
         ];
     }
 
+    // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', 'TREASURY');
+        return parent::getEloquentQuery()
+            ->where('status', 'TREASURY')
+            ->with([
+                'provider:id,name',
+                'accountant:id,name'
+            ]);
     }
-    // En app/Filament/Resources/AdvanceTreasuryResource.php
 
     public static function canAccess(): bool
     {

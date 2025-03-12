@@ -99,6 +99,15 @@ class AdvanceCompletedResource extends Resource
                 Tables\Columns\TextColumn::make('legalization_number')
                     ->label('N° Legalización')
                     ->searchable(),
+                // Columnas adicionales con toggleable por defecto
+                Tables\Columns\TextColumn::make('legalized_at')
+                    ->label('Fecha de Legalización')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('legalizer.name')
+                    ->label('Legalizado por')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -129,10 +138,9 @@ class AdvanceCompletedResource extends Resource
                     ->modalFooterActions([
                         Tables\Actions\Action::make('descargar')
                             ->label('Descargar')
-                            ->icon('heroicon-o-arrow-down')  // Cambiado a un icono más seguro
+                            ->icon('heroicon-o-arrow-down')
                             ->color('gray')
                             ->action(function (Advance $record) {
-
                                 return response()->streamDownload(function () use ($record) {
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
@@ -148,11 +156,30 @@ class AdvanceCompletedResource extends Resource
                     ]),
             ])
             ->bulkActions([])
+            // Optimización de la consulta para evitar N+1
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('status', 'COMPLETED');
+                return $query->where('status', 'COMPLETED')
+                    ->with(['provider:id,name', 'legalizer:id,name']);
             })
             ->defaultSort('legalized_at', 'desc')
-        ;
+            // Implementar paginación para mejorar rendimiento
+            ->paginated([10, 25, 50, 100])
+            // Persistir filtros para mejorar UX
+            ->persistFiltersInSession()
+            // Reducir actividad de actualización y renderizado para mejorar rendimiento
+            ->paginationPageOptions([10, 25, 50, 100])
+            // Botón de filtros más limpio
+            ->filtersTriggerAction(
+                fn(Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtros')
+            )
+            // Mejoras visuales y de rendimiento
+            ->striped()
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ]);
     }
 
     public static function getPages(): array
@@ -162,11 +189,16 @@ class AdvanceCompletedResource extends Resource
         ];
     }
 
+    // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', 'COMPLETED');
+        return parent::getEloquentQuery()
+            ->where('status', 'COMPLETED')
+            ->with([
+                'provider:id,name',
+                'legalizer:id,name'
+            ]);
     }
-    // En app/Filament/Resources/AdvanceCompletedResource.php
 
     public static function canAccess(): bool
     {
