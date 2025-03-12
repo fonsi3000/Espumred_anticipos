@@ -49,14 +49,21 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.2-intl \
     php8.2-readline \
     php8.2-pcov \
-    php8.2-dev
+    php8.2-dev \
+    php8.2-swoole
 
+# Configurar OPcache para mejor rendimiento
+RUN echo "opcache.enable=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.memory_consumption=128" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.interned_strings_buffer=8" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.max_accelerated_files=10000" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.validate_timestamps=0" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.save_comments=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini && \
+    echo "opcache.fast_shutdown=1" >> /etc/php/8.2/cli/conf.d/10-opcache.ini
 
-# Instalar Swoole con manejo de errores
-RUN set -e; \
-    pecl install swoole || pecl install swoole; \
-    echo "extension=swoole.so" > /etc/php/8.2/mods-available/swoole.ini && \
-    phpenmod swoole
+# Configurar PHP para mejor rendimiento con Octane
+RUN echo "memory_limit=512M" >> /etc/php/8.2/cli/conf.d/99-custom.ini && \
+    echo "max_execution_time=60" >> /etc/php/8.2/cli/conf.d/99-custom.ini
 
 # Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -69,10 +76,17 @@ COPY . .
 
 # Instalar dependencias de manera separada para facilitar la depuración
 RUN composer install --no-interaction --optimize-autoloader --no-dev
-RUN composer require laravel/octane --no-interaction
-RUN php artisan octane:install --server=swoole || true
+RUN composer require laravel/octane swoole --with-dependencies
+RUN php artisan octane:install --server=swoole --force
+RUN composer dump-autoload -o
+RUN php artisan config:clear
+RUN php artisan cache:clear
+
+# Instalar y compilar assets
 RUN npm install || true
 RUN npm run build || true
+
+# Configurar permisos
 RUN chown -R www-data:www-data /app
 RUN chmod -R 775 storage bootstrap/cache
 RUN php artisan key:generate --force || true
