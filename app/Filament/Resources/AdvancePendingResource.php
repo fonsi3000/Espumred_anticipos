@@ -193,7 +193,7 @@ class AdvancePendingResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('status', 'PENDING')
                     ->with([
-                        'provider:id,name',
+                        'provider:id,name,document_number,SAP_code,address,phone,city',
                         'creator:id,name'
                     ]);
             })
@@ -227,7 +227,7 @@ class AdvancePendingResource extends Resource
         return parent::getEloquentQuery()
             ->where('status', 'PENDING')
             ->with([
-                'provider:id,name',
+                'provider:id,name,document_number,SAP_code,address,phone,city',
                 'creator:id,name'
             ]);
     }

@@ -280,7 +280,7 @@ class AdvanceUserResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('created_by', Auth::id())
                     ->with([
-                        'provider:id,name'
+                        'provider:id,name,document_number,SAP_code,address,phone,city'
                     ]);
             })
             ->defaultSort('created_at', 'desc')
@@ -313,7 +313,7 @@ class AdvanceUserResource extends Resource
         return parent::getEloquentQuery()
             ->where('created_by', Auth::id())
             ->with([
-                'provider:id,name'
+                'provider:id,name,document_number,SAP_code,address,phone,city'
             ]);
     }
 

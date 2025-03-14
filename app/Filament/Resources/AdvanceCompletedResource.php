@@ -159,7 +159,10 @@ class AdvanceCompletedResource extends Resource
             // Optimización de la consulta para evitar N+1
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('status', 'COMPLETED')
-                    ->with(['provider:id,name', 'legalizer:id,name']);
+                    ->with([
+                        'provider:id,name,document_number,SAP_code,address,phone,city',
+                        'legalizer:id,name'
+                    ]);
             })
             ->defaultSort('legalized_at', 'desc')
             // Implementar paginación para mejorar rendimiento
@@ -195,7 +198,7 @@ class AdvanceCompletedResource extends Resource
         return parent::getEloquentQuery()
             ->where('status', 'COMPLETED')
             ->with([
-                'provider:id,name',
+                'provider:id,name,document_number,SAP_code,address,phone,city',
                 'legalizer:id,name'
             ]);
     }

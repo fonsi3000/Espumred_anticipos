@@ -182,7 +182,10 @@ class AdvanceApprovedResource extends Resource
             // Optimización de la consulta base con eager loading
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('status', 'APPROVED')
-                    ->with(['provider:id,name', 'approver:id,name']);
+                    ->with([
+                        'provider:id,name,document_number,SAP_code,address,phone,city',
+                        'approver:id,name'
+                    ]);
             })
             ->defaultSort('approved_at', 'desc')
             // Implementar paginación más eficiente
@@ -211,7 +214,11 @@ class AdvanceApprovedResource extends Resource
         // En su lugar, optimizamos con eager loading
         return parent::getEloquentQuery()
             ->where('status', 'APPROVED')
-            ->with(['provider:id,name', 'creator:id,name', 'approver:id,name']);
+            ->with([
+                'provider:id,name,document_number,SAP_code,address,phone,city',
+                'creator:id,name',
+                'approver:id,name'
+            ]);
     }
 
     public static function canAccess(): bool

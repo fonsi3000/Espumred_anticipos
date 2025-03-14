@@ -343,7 +343,7 @@ class AdvanceResource extends Resource
             // Optimización: Eager loading selectivo
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->with([
-                    'provider:id,name',
+                    'provider:id,name,document_number,SAP_code,address,phone,city',
                     'creator:id,name',
                     'approver:id,name'
                 ]);
@@ -375,7 +375,7 @@ class AdvanceResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
-                'provider:id,name',
+                'provider:id,name,document_number,SAP_code,address,phone,city',
                 'creator:id,name',
                 'approver:id,name'
             ]);

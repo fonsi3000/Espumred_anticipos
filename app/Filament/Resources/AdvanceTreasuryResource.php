@@ -180,7 +180,7 @@ class AdvanceTreasuryResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('status', 'TREASURY')
                     ->with([
-                        'provider:id,name',
+                        'provider:id,name,document_number,SAP_code,address,phone,city',
                         'accountant:id,name'
                     ]);
             })
@@ -214,10 +214,11 @@ class AdvanceTreasuryResource extends Resource
         return parent::getEloquentQuery()
             ->where('status', 'TREASURY')
             ->with([
-                'provider:id,name',
+                'provider:id,name,document_number,SAP_code,address,phone,city',
                 'accountant:id,name'
             ]);
     }
+
 
     public static function canAccess(): bool
     {

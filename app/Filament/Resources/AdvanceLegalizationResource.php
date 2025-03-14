@@ -186,7 +186,7 @@ class AdvanceLegalizationResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 return $query->where('status', 'LEGALIZATION')
                     ->with([
-                        'provider:id,name',
+                        'provider:id,name,document_number,SAP_code,address,phone,city',
                         'treasurer:id,name'
                     ]);
             })
@@ -220,7 +220,7 @@ class AdvanceLegalizationResource extends Resource
         return parent::getEloquentQuery()
             ->where('status', 'LEGALIZATION')
             ->with([
-                'provider:id,name',
+                'provider:id,name,document_number,SAP_code,address,phone,city',
                 'treasurer:id,name'
             ]);
     }
