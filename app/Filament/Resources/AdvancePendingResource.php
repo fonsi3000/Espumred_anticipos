@@ -64,6 +64,10 @@ class AdvancePendingResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID anticipo')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('provider.name')
                     ->label('Proveedor')
                     ->searchable()

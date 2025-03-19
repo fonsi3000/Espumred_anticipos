@@ -54,16 +54,20 @@ class AdvanceTreasuryResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
-    {
-        // Reutilizamos el formulario del AdvanceResource con todas sus optimizaciones
-        return AdvanceResource::form($form);
-    }
+    // public static function form(Form $form): Form
+    // {
+    //     // Reutilizamos el formulario del AdvanceResource con todas sus optimizaciones
+    //     return AdvanceResource::form($form);
+    // }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID anticipo')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('provider.name')
                     ->label('Proveedor')
                     ->searchable()

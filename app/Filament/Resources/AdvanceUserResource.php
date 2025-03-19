@@ -139,6 +139,10 @@ class AdvanceUserResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID anticipo')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('provider.name')
                     ->label('Proveedor')
                     ->searchable()
@@ -230,6 +234,30 @@ class AdvanceUserResource extends Resource
                             ->color('secondary')
                             ->action(fn() => null),
                     ]),
+                Tables\Actions\EditAction::make()
+                    ->modalHeading('Editar Anticipo')
+                    ->modalWidth('4xl')
+                    ->visible(fn(Advance $record): bool => $record->status === 'PENDING')
+                    ->using(function (Advance $record, array $data): Advance {
+                        // Calcular los valores antes de guardar
+                        $subtotal = $data['quantity'] * $data['unit_price'];
+                        $iva = $data['has_iva'] ? $subtotal * 0.19 : 0;
+                        $total = $subtotal + $iva;
+                        $advanceAmount = $total * ($data['advance_percentage'] / 100);
+
+                        $data['subtotal'] = $subtotal;
+                        $data['iva_value'] = $iva;
+                        $data['total_amount'] = $total;
+                        $data['advance_amount'] = $advanceAmount;
+                        $data['pending_balance'] = $total - $advanceAmount;
+                        $data['amount_in_words'] = self::numberToWords($total, $data['currency']);
+
+                        $record->update($data);
+
+                        return $record;
+                    }),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn(Advance $record): bool => $record->status === 'PENDING'),
             ])
             // Optimización: reducir las bulk actions innecesarias  
             ->bulkActions([])

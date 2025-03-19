@@ -54,16 +54,20 @@ class AdvanceLegalizationResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
-    {
-        // Reutilizamos el formulario del AdvanceResource
-        return AdvanceResource::form($form);
-    }
+    // public static function form(Form $form): Form
+    // {
+    //     // Reutilizamos el formulario del AdvanceResource
+    //     return AdvanceResource::form($form);
+    // }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID anticipo')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('provider.name')
                     ->label('Proveedor')
                     ->searchable()
@@ -145,7 +149,6 @@ class AdvanceLegalizationResource extends Resource
                     ->modalContent(function (Advance $record) {
                         // En este punto, el modal ya está abierto, así que cargamos los datos necesarios
                         $record->load(['provider', 'creator', 'approver', 'accountant', 'treasurer', 'legalizer']);
-
                         return view('filament.resources.advance-resource.pages.advance-view', [
                             'advance' => $record,
                             'statuses' => Advance::STATUS,
