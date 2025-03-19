@@ -191,13 +191,18 @@ class AdvanceUserResource extends Resource
                     ->label('Estado'),
             ])
             ->actions([
+                // Solo permitir la acción de ver con la vista personalizada existente
                 Tables\Actions\Action::make('view')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading(fn(Advance $record): string => "Anticipo: {$record->provider->name}")
                     ->modalWidth('5xl')
-                    ->modalContent(function (Advance $record): View {
+                    // La clave está en usar una función de retorno diferida que se ejecuta solo cuando se abre el modal
+                    ->modalContent(function (Advance $record) {
+                        // En este punto, el modal ya está abierto, así que cargamos los datos necesarios
+                        $record->load(['provider', 'creator', 'approver', 'accountant', 'treasurer', 'legalizer']);
+
                         return view('filament.resources.advance-resource.pages.advance-view', [
                             'advance' => $record,
                             'statuses' => Advance::STATUS,
@@ -210,6 +215,9 @@ class AdvanceUserResource extends Resource
                             ->color('gray')
                             ->action(function (Advance $record) {
                                 return response()->streamDownload(function () use ($record) {
+                                    // Cargamos los datos sólo cuando se solicita la descarga
+                                    $record->load(['provider', 'creator', 'approver', 'accountant', 'treasurer', 'legalizer']);
+
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
                                         'statuses' => Advance::STATUS,
@@ -222,32 +230,8 @@ class AdvanceUserResource extends Resource
                             ->color('secondary')
                             ->action(fn() => null),
                     ]),
-                Tables\Actions\EditAction::make()
-                    ->modalHeading('Editar Anticipo')
-                    ->modalWidth('4xl')
-                    ->visible(fn(Advance $record): bool => $record->status === 'PENDING')
-                    ->using(function (Advance $record, array $data): Advance {
-                        // Calcular los valores antes de guardar
-                        $subtotal = $data['quantity'] * $data['unit_price'];
-                        $iva = $data['has_iva'] ? $subtotal * 0.19 : 0;
-                        $total = $subtotal + $iva;
-                        $advanceAmount = $total * ($data['advance_percentage'] / 100);
-
-                        $data['subtotal'] = $subtotal;
-                        $data['iva_value'] = $iva;
-                        $data['total_amount'] = $total;
-                        $data['advance_amount'] = $advanceAmount;
-                        $data['pending_balance'] = $total - $advanceAmount;
-                        $data['amount_in_words'] = self::numberToWords($total, $data['currency']);
-
-                        $record->update($data);
-
-                        return $record;
-                    }),
-                Tables\Actions\DeleteAction::make()
-                    ->visible(fn(Advance $record): bool => $record->status === 'PENDING'),
             ])
-            // Optimización: reducir las bulk actions innecesarias
+            // Optimización: reducir las bulk actions innecesarias  
             ->bulkActions([])
             ->emptyStateHeading('No hay anticipos')
             ->emptyStateDescription('Crea tu primer anticipo haciendo clic en el botón "Crear"')

@@ -127,9 +127,14 @@ class AdvanceCompletedResource extends Resource
                 Tables\Actions\Action::make('view')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->modalHeading(fn(Advance $record): string => "Anticipo: {$record->provider->name}")
                     ->modalWidth('5xl')
-                    ->modalContent(function (Advance $record): View {
+                    // La clave está en usar una función de retorno diferida que se ejecuta solo cuando se abre el modal
+                    ->modalContent(function (Advance $record) {
+                        // En este punto, el modal ya está abierto, así que cargamos los datos necesarios
+                        $record->load(['provider', 'creator', 'approver', 'accountant', 'treasurer', 'legalizer']);
+
                         return view('filament.resources.advance-resource.pages.advance-view', [
                             'advance' => $record,
                             'statuses' => Advance::STATUS,
@@ -142,6 +147,9 @@ class AdvanceCompletedResource extends Resource
                             ->color('gray')
                             ->action(function (Advance $record) {
                                 return response()->streamDownload(function () use ($record) {
+                                    // Cargamos los datos sólo cuando se solicita la descarga
+                                    $record->load(['provider', 'creator', 'approver', 'accountant', 'treasurer', 'legalizer']);
+
                                     echo Pdf::loadView('filament.resources.advance-resource.pages.download-advance', [
                                         'advance' => $record,
                                         'statuses' => Advance::STATUS,
