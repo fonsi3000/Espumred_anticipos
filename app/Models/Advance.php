@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,7 @@ class Advance extends Model
 {
     protected $fillable = [
         'provider_id',
+        'factory',
         'concept',
         'currency',
         'quantity',
@@ -86,6 +88,32 @@ class Advance extends Model
         'REJECTED' => 'red'
     ];
 
+    // Constantes para las fábricas
+    public const FACTORIES = [
+        'medellin' => 'Medellín',
+        'litoral' => 'Litoral'
+    ];
+
+    // Nuevo scope para filtrar por fábrica
+    public function scopeForFactory(Builder $query, ?string $factory = null): Builder
+    {
+        if ($factory) {
+            return $query->where('factory', $factory);
+        }
+
+        return $query;
+    }
+
+    // Determinar la fábrica basada en el dominio de correo del usuario
+    public static function determineFactoryFromEmail(string $email): string
+    {
+        if (str_contains($email, '@espumadosdellitoral.com.co')) {
+            return 'litoral';
+        }
+
+        return 'medellin';
+    }
+
     // Relaciones optimizadas con clave explícita
     public function provider(): BelongsTo
     {
@@ -155,6 +183,14 @@ class Advance extends Model
     {
         return Cache::remember("advance_status_color_{$this->id}_{$this->status}", now()->addDay(), function () {
             return self::STATUS_COLORS[$this->status] ?? 'gray';
+        });
+    }
+
+    // Obtener etiqueta de fábrica
+    public function getFactoryLabelAttribute(): string
+    {
+        return Cache::remember("advance_factory_label_{$this->id}_{$this->factory}", now()->addDay(), function () {
+            return self::FACTORIES[$this->factory] ?? 'Desconocido';
         });
     }
 
@@ -246,6 +282,7 @@ class Advance extends Model
     {
         Cache::forget("advance_status_label_{$this->id}_{$this->status}");
         Cache::forget("advance_status_color_{$this->id}_{$this->status}");
+        Cache::forget("advance_factory_label_{$this->id}_{$this->factory}");
     }
 
     // Hook optimizado con verificación para evitar cálculos innecesarios
@@ -257,6 +294,12 @@ class Advance extends Model
             $advance->status = $advance->status ?? 'PENDING';
             $advance->status_updated_at = now();
             $advance->created_by = Auth::id();
+
+            // Si no se ha especificado la fábrica, determinarla del correo del usuario
+            if (empty($advance->factory)) {
+                $user = Auth::user();
+                $advance->factory = self::determineFactoryFromEmail($user->email);
+            }
 
             // Realizamos todos los cálculos de una vez
             $advance->recalculateAllValues();

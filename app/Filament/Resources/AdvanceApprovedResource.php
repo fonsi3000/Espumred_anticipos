@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\Action;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
 
 class AdvanceApprovedResource extends Resource
 {
@@ -55,11 +56,11 @@ class AdvanceApprovedResource extends Resource
         return false;
     }
 
-    // public static function form(Form $form): Form
-    // {
-    //     // Reutilizamos el formulario del AdvanceResource
-    //     return AdvanceResource::form($form);
-    // }
+    protected static function getUserFactory(): string
+    {
+        $user = Auth::user();
+        return Advance::determineFactoryFromEmail($user->email);
+    }
 
     public static function table(Table $table): Table
     {
@@ -214,15 +215,22 @@ class AdvanceApprovedResource extends Resource
     // Optimización de la consulta principal
     public static function getEloquentQuery(): Builder
     {
-        // No podemos cachear la consulta directamente porque contiene objetos PDO no serializables
-        // En su lugar, optimizamos con eager loading
-        return parent::getEloquentQuery()
-            ->where('status', 'APPROVED')
-            ->with([
-                'provider:id,name,document_number,SAP_code,address,phone,city',
-                'creator:id,name',
-                'approver:id,name'
-            ]);
+        $user = Auth::user();
+
+        // Mantenemos la condición específica de estado 'APPROVED'
+        $query = parent::getEloquentQuery()->where('status', 'APPROVED');
+
+        // Solo aplicar filtro de fábrica si NO es super_admin
+        if (!$user->hasRole('super_admin')) {
+            $query = $query->where('factory', self::getUserFactory());
+        }
+
+        // Mantenemos el eager loading optimizado
+        return $query->with([
+            'provider:id,name,document_number,SAP_code,address,phone,city',
+            'creator:id,name',
+            'approver:id,name'
+        ]);
     }
 
     public static function canAccess(): bool

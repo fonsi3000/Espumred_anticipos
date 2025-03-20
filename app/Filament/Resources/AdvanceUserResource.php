@@ -35,6 +35,13 @@ class AdvanceUserResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    // Método para obtener la fábrica del usuario actual
+    protected static function getUserFactory(): string
+    {
+        $user = Auth::user();
+        return Advance::determineFactoryFromEmail($user->email);
+    }
+
     // Implementación del método requerido por HasShieldPermissions
     public static function getPermissionPrefixes(): array
     {
@@ -53,7 +60,6 @@ class AdvanceUserResource extends Resource
             'reorder',
         ];
     }
-
 
     public static function form(Form $form): Form
     {
@@ -126,6 +132,12 @@ class AdvanceUserResource extends Resource
                     ->collapsible()
                     ->lazy(), // Lazy loading para mejorar rendimiento
 
+                // Campo oculto para la fábrica
+                Forms\Components\Hidden::make('factory')
+                    ->default(function () {
+                        return self::getUserFactory();
+                    }),
+
                 Forms\Components\Hidden::make('subtotal'),
                 Forms\Components\Hidden::make('iva_value'),
                 Forms\Components\Hidden::make('total_amount'),
@@ -148,6 +160,16 @@ class AdvanceUserResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold),
+                Tables\Columns\TextColumn::make('factory')
+                    ->label('Fábrica')
+                    ->formatStateUsing(fn(string $state): string => Advance::FACTORIES[$state])
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'medellin' => 'warning',
+                        'litoral' => 'info',
+                        default => 'gray',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('total_amount')
                     ->label('Valor Total')
                     ->money('cop')
@@ -177,7 +199,7 @@ class AdvanceUserResource extends Resource
                 Tables\Columns\TextColumn::make('purchase_order')
                     ->label('Orden de Compra')
                     ->searchable(),
-                // Columna comentada pero disponible con toggleable
+                // Columna comentada pero disponible con toggleable  
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha de Creación')
                     ->dateTime('d/m/Y H:i')
@@ -239,6 +261,9 @@ class AdvanceUserResource extends Resource
                     ->modalWidth('4xl')
                     ->visible(fn(Advance $record): bool => $record->status === 'PENDING')
                     ->using(function (Advance $record, array $data): Advance {
+                        // Asegurar que la fábrica no cambie al editar
+                        $data['factory'] = $record->factory;
+
                         // Calcular los valores antes de guardar
                         $subtotal = $data['quantity'] * $data['unit_price'];
                         $iva = $data['has_iva'] ? $subtotal * 0.19 : 0;
@@ -285,15 +310,31 @@ class AdvanceUserResource extends Resource
                         $data['amount_in_words'] = self::numberToWords($total, $data['currency']);
                         $data['created_by'] = Auth::id();
 
+                        // Asegurar que la fábrica esté establecida
+                        if (empty($data['factory'])) {
+                            $data['factory'] = self::getUserFactory();
+                        }
+
                         return Advance::create($data);
                     }),
             ])
-            // Optimización de consulta con eager loading selectivo
+            // Optimización de consulta con eager loading selectivo y filtrado por fábrica
             ->modifyQueryUsing(function (Builder $query) {
-                return $query->where('created_by', Auth::id())
-                    ->with([
-                        'provider:id,name,document_number,SAP_code,address,phone,city'
-                    ]);
+                // Primero, obtener el usuario actual
+                $user = Auth::user();
+
+                // Iniciar con la condición básica: solo anticipos creados por el usuario actual
+                $query = $query->where('created_by', Auth::id());
+
+                // Si NO es super_admin, entonces añadir el filtro de fábrica
+                if (!$user->hasRole('super_admin')) {
+                    $query = $query->where('factory', self::getUserFactory());
+                }
+
+                // Añadir eager loading para mejorar rendimiento
+                return $query->with([
+                    'provider:id,name,document_number,SAP_code,address,phone,city'
+                ]);
             })
             ->defaultSort('created_at', 'desc')
             // Implementar paginación para mejorar rendimiento
@@ -319,14 +360,20 @@ class AdvanceUserResource extends Resource
         ];
     }
 
-    // Optimización de la consulta principal con eager loading selectivo
+    // Optimización de la consulta principal con eager loading selectivo y filtrado por fábrica
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->where('created_by', Auth::id())
-            ->with([
-                'provider:id,name,document_number,SAP_code,address,phone,city'
-            ]);
+        $user = Auth::user();
+        $query = parent::getEloquentQuery()->where('created_by', Auth::id());
+
+        // Solo aplicar filtro de fábrica si NO es super_admin
+        if (!$user->hasRole('super_admin')) {
+            $query = $query->where('factory', self::getUserFactory());
+        }
+
+        return $query->with([
+            'provider:id,name,document_number,SAP_code,address,phone,city'
+        ]);
     }
 
     public static function numberToWords($number, $currency): string

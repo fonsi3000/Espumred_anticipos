@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('advances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('provider_id')->constrained()->onDelete('cascade');
+            $table->enum('factory', ['medellin', 'litoral']);
             $table->string('concept');
             $table->enum('currency', ['COP', 'USD', 'EURO']);
             $table->decimal('quantity', 15, 2);

@@ -181,6 +181,13 @@
             </td>
             <td style="width: 40%; text-align: center; vertical-align: middle; padding: 10px;">
                 <div style="font-size: 18px; font-weight: bold; color: #333;">SOLICITUD DE ANTICIPO #{{ $advance->id }}</div>
+                <!-- Badge para mostrar la fábrica -->
+                <div style="margin-top: 8px; text-align: center;">
+                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; 
+                        {{ $advance->factory == 'medellin' ? 'background-color: #FFEDD5; color: #9A3412;' : 'background-color: #DBEAFE; color: #1E40AF;' }}">
+                        {{ $advance->factory == 'medellin' ? 'Espumas Medellín' : 'Espumados del Litoral' }}
+                    </span>
+                </div>
             </td>
             <td style="width: 30%; text-align: right; vertical-align: middle; padding: 10px;">
                 <div style="font-weight: bold;">Fecha: {{ $advance->created_at->format('d/m/Y') }}</div>

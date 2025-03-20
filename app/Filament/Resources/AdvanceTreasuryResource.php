@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\Action;
 use Illuminate\Contracts\View\View;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class AdvanceTreasuryResource extends Resource
 {
@@ -54,11 +55,11 @@ class AdvanceTreasuryResource extends Resource
         return false;
     }
 
-    // public static function form(Form $form): Form
-    // {
-    //     // Reutilizamos el formulario del AdvanceResource con todas sus optimizaciones
-    //     return AdvanceResource::form($form);
-    // }
+    protected static function getUserFactory(): string
+    {
+        $user = Auth::user();
+        return Advance::determineFactoryFromEmail($user->email);
+    }
 
     public static function table(Table $table): Table
     {
@@ -216,12 +217,21 @@ class AdvanceTreasuryResource extends Resource
     // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->where('status', 'TREASURY')
-            ->with([
-                'provider:id,name,document_number,SAP_code,address,phone,city',
-                'accountant:id,name'
-            ]);
+        $user = Auth::user();
+
+        // Mantenemos la condición específica de estado 'TREASURY'
+        $query = parent::getEloquentQuery()->where('status', 'TREASURY');
+
+        // Solo aplicar filtro de fábrica si NO es super_admin
+        if (!$user->hasRole('super_admin')) {
+            $query = $query->where('factory', self::getUserFactory());
+        }
+
+        // Mantenemos el eager loading existente
+        return $query->with([
+            'provider:id,name,document_number,SAP_code,address,phone,city',
+            'accountant:id,name'
+        ]);
     }
 
 

@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Filament\Support\Enums\FontWeight;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Actions\Action;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -52,6 +53,11 @@ class AdvancePendingResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+    protected static function getUserFactory(): string
+    {
+        $user = Auth::user();
+        return Advance::determineFactoryFromEmail($user->email);
     }
 
     public static function form(Form $form): Form
@@ -229,12 +235,18 @@ class AdvancePendingResource extends Resource
     // Optimización de la consulta principal con eager loading selectivo
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->where('status', 'PENDING')
-            ->with([
-                'provider:id,name,document_number,SAP_code,address,phone,city',
-                'creator:id,name'
-            ]);
+        $user = Auth::user();
+        $query = parent::getEloquentQuery()->where('status', 'PENDING');
+
+        // Solo aplicar filtro de fábrica si NO es super_admin
+        if (!$user->hasRole('super_admin')) {
+            $query = $query->where('factory', Advance::determineFactoryFromEmail($user->email));
+        }
+
+        return $query->with([
+            'provider:id,name,document_number,SAP_code,address,phone,city',
+            'creator:id,name'
+        ]);
     }
 
     public static function canAccess(): bool
