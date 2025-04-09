@@ -12,10 +12,10 @@ services:
         PHP_POST_MAX_SIZE: ${PHP_POST_MAX_SIZE}
     container_name: ${APP_CONTAINER_NAME}
     environment:
-      APP_ENV: ${APP_ENV}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: true # ← activamos debug temporalmente
-      APP_URL: ${APP_URL}
+      APP_ENV: "${APP_ENV}"
+      APP_KEY: "${APP_KEY}"
+      APP_DEBUG: "${APP_DEBUG}"
+      APP_URL: "${APP_URL}"
     volumes:
       - .:/var/www/html
     depends_on:
