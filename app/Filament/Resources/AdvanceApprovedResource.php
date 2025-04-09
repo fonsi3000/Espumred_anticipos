@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ListAdvancesApproved\Pages\ListAdvancesApproved;
+use App\Filament\Resources\AdvanceApprovedResource\Pages\ListAdvancesApproved;
 use App\Models\Advance;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
