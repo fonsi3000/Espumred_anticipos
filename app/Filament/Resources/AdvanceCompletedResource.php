@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\AdvanceResource\Pages;
+use App\Filament\Resources\AdvanceCompletedResource\Pages;
+use App\Filament\Resources\AdvanceCompletedResource\Pages\ListAdvancesCompleted;
 use App\Models\Advance;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
@@ -201,7 +202,7 @@ class AdvanceCompletedResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAdvancesCompleted::route('/'),
+            'index' => ListAdvancesCompleted::route('/'),
         ];
     }
 
