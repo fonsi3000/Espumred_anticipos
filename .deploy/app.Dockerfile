@@ -17,9 +17,12 @@ RUN apk add --no-cache \
     nginx \
     openssl \
     netcat-openbsd \
+    freetype-dev \
+    libjpeg-turbo-dev \
     $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -27,7 +30,8 @@ RUN apk add --no-cache \
     zip \
     exif \
     pcntl \
-    intl
+    intl \
+    gd
 
 
 # Instala Composer
