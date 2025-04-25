@@ -82,10 +82,10 @@
                         <td class="py-2 px-4 border text-center">{{ number_format($advance->quantity, 0, ',', '.') }}</td>
                         <td class="py-2 px-4 border text-right">${{ number_format($advance->unit_price, 2, ',', '.') }}</td>
                         <td class="py-2 px-4 border text-right">${{ number_format($advance->subtotal, 2, ',', '.') }}</td>
-                        <td class="py-2 px-4 border text-right">${{ number_format($advance->iva_value, 0, ',', '.') }}</td>
-                        <td class="py-2 px-4 border text-right font-bold">${{ number_format($advance->total_amount, 0, ',', '.') }}</td>
-                        <td class="py-2 px-4 border text-right">${{ number_format($advance->advance_amount, 0, ',', '.') }}</td>
-                        <td class="py-2 px-4 border text-right">${{ number_format($advance->pending_balance, 0, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right">${{ number_format($advance->iva_value, 2, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right font-bold">${{ number_format($advance->total_amount, 2, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right">${{ number_format($advance->advance_amount, 2, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right">${{ number_format($advance->pending_balance, 2, ',', '.') }}</td>
                     </tr>
                 </tbody>
             </table>
