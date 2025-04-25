@@ -244,9 +244,9 @@
             </thead>
             <tbody>
                 <tr>
-                    <td class="text-center">{{ $advance->quantity }}</td>
-                    <td class="text-right">${{ number_format($advance->unit_price, 0, ',', '.') }}</td>
-                    <td class="text-right">${{ number_format($advance->subtotal, 0, ',', '.') }}</td>
+                    <td class="text-center">{{ number_format($advance->quantity, 0, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format($advance->unit_price, 2, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format($advance->subtotal, 2, ',', '.') }}</td>
                     <td class="text-right">${{ number_format($advance->iva_value, 0, ',', '.') }}</td>
                     <td class="text-right font-bold">${{ number_format($advance->total_amount, 0, ',', '.') }}</td>
                     <td class="text-right">${{ number_format($advance->advance_amount, 0, ',', '.') }}</td>

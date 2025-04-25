@@ -79,9 +79,9 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td class="py-2 px-4 border text-center">{{ $advance->quantity }}</td>
-                        <td class="py-2 px-4 border text-right">${{ number_format($advance->unit_price, 0, ',', '.') }}</td>
-                        <td class="py-2 px-4 border text-right">${{ number_format($advance->subtotal, 0, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-center">{{ number_format($advance->quantity, 0, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right">${{ number_format($advance->unit_price, 2, ',', '.') }}</td>
+                        <td class="py-2 px-4 border text-right">${{ number_format($advance->subtotal, 2, ',', '.') }}</td>
                         <td class="py-2 px-4 border text-right">${{ number_format($advance->iva_value, 0, ',', '.') }}</td>
                         <td class="py-2 px-4 border text-right font-bold">${{ number_format($advance->total_amount, 0, ',', '.') }}</td>
                         <td class="py-2 px-4 border text-right">${{ number_format($advance->advance_amount, 0, ',', '.') }}</td>
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    <!-- Trazabilidad -->
+    <!-- Trazabilidad  -->
     <div class="p-4">
         <h2 class="font-bold text-lg mb-3">Trazabilidad del Anticipo</h2>
         <div class="overflow-x-auto">
