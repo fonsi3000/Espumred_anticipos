@@ -76,7 +76,11 @@ class AdvanceLegalizationResource extends Resource
                     ->weight(FontWeight::Bold),
                 Tables\Columns\TextColumn::make('total_amount')
                     ->label('Valor Total')
-                    ->money('cop')
+                    ->money(fn(Advance $record): string => match ($record->currency) {
+                        'USD' => 'usd',
+                        'EURO' => 'eur',
+                        default => 'cop',
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -93,7 +97,11 @@ class AdvanceLegalizationResource extends Resource
                     ->label('Estado'),
                 Tables\Columns\TextColumn::make('advance_amount')
                     ->label('Valor Anticipo')
-                    ->money('cop')
+                    ->money(fn(Advance $record): string => match ($record->currency) {
+                        'USD' => 'usd',
+                        'EURO' => 'eur',
+                        default => 'cop',
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('pending_balance')
                     ->label('Saldo Pendiente')

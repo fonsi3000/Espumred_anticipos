@@ -172,7 +172,11 @@ class AdvanceUserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('total_amount')
                     ->label('Valor Total')
-                    ->money('cop')
+                    ->money(fn(Advance $record): string => match ($record->currency) {
+                        'USD' => 'usd',
+                        'EURO' => 'eur',
+                        default => 'cop',
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -194,12 +198,16 @@ class AdvanceUserResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('advance_amount')
                     ->label('Valor Anticipo')
-                    ->money('cop')
+                    ->money(fn(Advance $record): string => match ($record->currency) {
+                        'USD' => 'usd',
+                        'EURO' => 'eur',
+                        default => 'cop',
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('purchase_order')
                     ->label('Orden de Compra')
                     ->searchable(),
-                // Columna comentada pero disponible con toggleable  
+                // Columna comentada pero disponible con toggleable 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha de Creación')
                     ->dateTime('d/m/Y H:i')
