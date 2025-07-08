@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  app:
+  anticipos_app:
     build:
       context: .
       dockerfile: .deploy/app.Dockerfile
@@ -18,13 +18,14 @@ services:
       APP_URL: ${APP_URL}
     volumes:
       - .:/var/www/html
+      - anticipos-public:/var/www/html/public
     depends_on:
-      - db
-      - redis
+      - anticipos_db
+      - anticipos_redis
     networks:
       - ${DOCKER_NETWORK}
 
-  nginx:
+  anticipos_nginx:
     build:
       context: .
       dockerfile: .deploy/nginx.Dockerfile
@@ -37,11 +38,11 @@ services:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
     depends_on:
-      - app
+      - anticipos_app
     networks:
       - ${DOCKER_NETWORK}
 
-  db:
+  anticipos_db:
     image: mysql:8.0
     container_name: ${DB_CONTAINER_NAME}
     ports:
@@ -57,11 +58,11 @@ services:
     networks:
       - ${DOCKER_NETWORK}
 
-  redis:
+  anticipos_redis:
     image: redis:7-alpine
-    container_name: anticipos_redis
+    container_name: ${REDIS_CONTAINER_NAME}
     ports:
-      - "6381:6379" # sin interferencia con el 6380 de Registros
+      - "${REDIS_EXTERNAL_PORT}:6379"
     networks:
       - ${DOCKER_NETWORK}
 
@@ -79,3 +80,6 @@ networks:
 
 volumes:
   anticipos_db_data:
+  anticipos-public:
+    external: true
+    name: anticipos-public
