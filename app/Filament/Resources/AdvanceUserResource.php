@@ -69,6 +69,19 @@ class AdvanceUserResource extends Resource
                     ->description('Detalles básicos del anticipo')
                     ->icon('heroicon-o-information-circle')
                     ->schema([
+                        // ✅ Fábrica: visible solo para rol compras o super_admin
+                        auth()->user()->hasAnyRole(['compras', 'super_admin'])
+                            ? Forms\Components\Select::make('factory')
+                            ->label('Fábrica')
+                            ->options([
+                                'medellin' => 'Espumas Medellín',
+                                'litoral' => 'Espumados del Litoral',
+                            ])
+                            ->required()
+                            ->columnSpan(2)
+                            : Forms\Components\Hidden::make('factory')
+                            ->default(fn() => self::getUserFactory()),
+
                         Forms\Components\Select::make('provider_id')
                             ->relationship('provider', 'name')
                             ->label('Proveedor')
@@ -76,10 +89,12 @@ class AdvanceUserResource extends Resource
                             ->preload()
                             ->required()
                             ->columnSpan(2),
+
                         Forms\Components\Textarea::make('concept')
                             ->label('Concepto')
                             ->required()
                             ->columnSpan(2),
+
                         Forms\Components\TextInput::make('purchase_order')
                             ->label('Orden de Compra')
                             ->required()
@@ -98,22 +113,26 @@ class AdvanceUserResource extends Resource
                             ->label('Moneda')
                             ->options(Advance::CURRENCIES)
                             ->required(),
+
                         Forms\Components\TextInput::make('quantity')
                             ->label('Cantidad')
                             ->required()
                             ->numeric()
                             ->minValue(1),
+
                         Forms\Components\TextInput::make('unit_price')
                             ->label('Valor Unitario')
                             ->required()
                             ->numeric()
                             ->prefix('$')
                             ->minValue(0),
+
                         Forms\Components\Toggle::make('has_iva')
                             ->label('¿Aplica IVA?')
                             ->default(false)
                             ->onColor('success')
                             ->offColor('danger'),
+
                         Forms\Components\TextInput::make('advance_percentage')
                             ->label('Porcentaje de Anticipo')
                             ->required()
@@ -121,6 +140,7 @@ class AdvanceUserResource extends Resource
                             ->minValue(1)
                             ->maxValue(100)
                             ->suffix('%'),
+
                         Forms\Components\TextInput::make('legalization_term')
                             ->label('Plazo de Legalización')
                             ->required()
@@ -132,12 +152,6 @@ class AdvanceUserResource extends Resource
                     ->collapsible()
                     ->lazy(), // Lazy loading para mejorar rendimiento
 
-                // Campo oculto para la fábrica
-                Forms\Components\Hidden::make('factory')
-                    ->default(function () {
-                        return self::getUserFactory();
-                    }),
-
                 Forms\Components\Hidden::make('subtotal'),
                 Forms\Components\Hidden::make('iva_value'),
                 Forms\Components\Hidden::make('total_amount'),
@@ -146,6 +160,8 @@ class AdvanceUserResource extends Resource
                 Forms\Components\Hidden::make('pending_balance'),
             ]);
     }
+
+
 
     public static function table(Table $table): Table
     {
@@ -328,22 +344,21 @@ class AdvanceUserResource extends Resource
             ])
             // Optimización de consulta con eager loading selectivo y filtrado por fábrica
             ->modifyQueryUsing(function (Builder $query) {
-                // Primero, obtener el usuario actual
+                // Obtener el usuario actual
                 $user = Auth::user();
 
-                // Iniciar con la condición básica: solo anticipos creados por el usuario actual
-                $query = $query->where('created_by', Auth::id());
-
-                // Si NO es super_admin, entonces añadir el filtro de fábrica
-                if (!$user->hasRole('super_admin')) {
-                    $query = $query->where('factory', self::getUserFactory());
+                // Si el usuario NO es super_admin NI compras, aplicar restricciones
+                if (!$user->hasAnyRole(['super_admin', 'compras'])) {
+                    $query->where('created_by', $user->id);
+                    $query->where('factory', self::getUserFactory());
                 }
 
-                // Añadir eager loading para mejorar rendimiento
+                // Eager load para mejorar rendimiento
                 return $query->with([
                     'provider:id,name,document_number,SAP_code,address,phone,city'
                 ]);
             })
+
             ->defaultSort('created_at', 'desc')
             // Implementar paginación para mejorar rendimiento
             ->paginated([10, 25, 50, 100])
@@ -372,17 +387,33 @@ class AdvanceUserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $user = Auth::user();
-        $query = parent::getEloquentQuery()->where('created_by', Auth::id());
+        $query = parent::getEloquentQuery();
 
-        // Solo aplicar filtro de fábrica si NO es super_admin
-        if (!$user->hasRole('super_admin')) {
-            $query = $query->where('factory', self::getUserFactory());
+        // Si es super_admin, no se aplica ningún filtro
+        if ($user->hasRole('super_admin')) {
+            return $query->with([
+                'provider:id,name,document_number,SAP_code,address,phone,city'
+            ]);
         }
+
+        // Si es compras, solo ver los anticipos que él creó (sin filtrar por fábrica)
+        if ($user->hasRole('compras')) {
+            $query = $query->where('created_by', $user->id);
+            return $query->with([
+                'provider:id,name,document_number,SAP_code,address,phone,city'
+            ]);
+        }
+
+        // Otros roles: ver solo anticipos creados por ellos y de su fábrica
+        $query = $query->where('created_by', $user->id)
+            ->where('factory', self::getUserFactory());
 
         return $query->with([
             'provider:id,name,document_number,SAP_code,address,phone,city'
         ]);
     }
+
+
 
     public static function numberToWords($number, $currency): string
     {
